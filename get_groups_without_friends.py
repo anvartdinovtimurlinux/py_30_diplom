@@ -1,9 +1,10 @@
 import time
-from pprint import pprint
-
 import requests
 import json
 import argparse
+
+from progress.bar import IncrementalBar
+
 
 TOKEN_VK = '709f6974b00c7b3299e7c5e1be0036e73bac6d72a04732e52b240705704df59b00cff81d7dd15c5510ef1'
 API_VERSION_VK = 5.103
@@ -40,6 +41,7 @@ class User:
 
     def get_user_groups(self):
         self.params['extended'] = 1
+        time.sleep(0.5)
         try:
             response = requests.get(f'{URL_VK}groups.get', params=self.params)
             return response.json()['response']['items']
@@ -51,10 +53,13 @@ class User:
         user_friends = self.get_friends()
 
         all_friends_groups = set()
+        bar = IncrementalBar('Запрос групп, в которых состоят друзья', max=len(user_friends))
         for fr in user_friends:
             friend = User(fr)
             friend_groups = friend.get_user_groups()
             all_friends_groups.update([group['id'] for group in friend_groups])
+            bar.next()
+        bar.finish()
 
         user_groups_without_friends = user_groups - all_friends_groups
         self.params['group_ids'] = ','.join(map(str, user_groups_without_friends))
@@ -85,6 +90,7 @@ def arg_parse():
 def write_json_to_file(data, path_to_file):
     with open(path_to_file, 'w', encoding='utf-8') as f:
         json.dump(data, f, ensure_ascii=False, indent=2)
+    print(f'Файл {path_to_file} создан')
 
 
 def main():
