@@ -17,5 +17,3 @@
 Программа использует внешние библиотеки
 * [requests](https://github.com/psf/requests)
 * [progress](https://github.com/verigak/progress/)
-=======
->>>>>>> 0339c9be3d3ce9ef43c819c34f52b9ef669ed0fb
