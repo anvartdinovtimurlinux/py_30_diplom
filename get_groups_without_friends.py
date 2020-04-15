@@ -5,7 +5,6 @@ import argparse
 
 from progress.bar import IncrementalBar
 
-
 TOKEN_VK = '709f6974b00c7b3299e7c5e1be0036e73bac6d72a04732e52b240705704df59b00cff81d7dd15c5510ef1'
 API_VERSION_VK = 5.103
 URL_VK = 'https://api.vk.com/method/'
@@ -26,27 +25,25 @@ class User:
 
     @staticmethod
     def get_user_id(user_ids):
+        method = 'users.get'
         params = {
             'user_ids': user_ids,
             'access_token': TOKEN_VK,
             'v': API_VERSION_VK,
         }
-        time.sleep(0.5)
-        response = requests.get(f'{URL_VK}users.get', params=params)
-        return response.json()['response'][0]['id']
+        response = get_response(URL_VK, method, params)
+        return response['response'][0]['id']
 
     def get_friends(self):
-        response = requests.get(f'{URL_VK}friends.get', params=self.params)
-        return response.json()['response']['items']
+        method = 'friends.get'
+        response = get_response(URL_VK, method, self.params)
+        return response['response']['items']
 
     def get_user_groups(self):
+        method = 'groups.get'
         self.params['extended'] = 1
-        time.sleep(0.5)
-        try:
-            response = requests.get(f'{URL_VK}groups.get', params=self.params)
-            return response.json()['response']['items']
-        except KeyError:
-            return []
+        response = get_response(URL_VK, method, self.params)
+        return response['response']['items'] if response else []
 
     def get_user_groups_without_friends(self):
         user_groups = set([group['id'] for group in self.get_user_groups()])
@@ -61,16 +58,34 @@ class User:
             bar.next()
         bar.finish()
 
+        method = 'groups.getById'
         user_groups_without_friends = user_groups - all_friends_groups
         self.params['group_ids'] = ','.join(map(str, user_groups_without_friends))
         self.params['fields'] = 'members_count'
-        response = requests.get(f'{URL_VK}groups.getById', params=self.params)
+        response = get_response(URL_VK, method, self.params)
 
         return [{
             'name': group['name'],
             'gid': group['id'],
             'members_count': group['members_count'],
-        } for group in response.json()['response']]
+        } for group in response['response']]
+
+
+def get_response(url, method, params):
+    response = requests.get(f'{url}{method}', params=params).json()
+    if response.get('error'):
+        if response['error']['error_code'] == 6:
+            time.sleep(0.5)
+            return get_response(url, method, params)
+        elif response['error']['error_code'] == 18 or response['error']['error_code'] == 30:
+            # Ошибки 18 и 30 возникают, если пользователь удален или его профиль приватный
+            return
+        else:
+            print(response['error'])
+    if response.get('error'):
+        pass
+    else:
+        return response
 
 
 def arg_parse():
