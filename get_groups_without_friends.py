@@ -1,8 +1,10 @@
+import argparse
+import json
+import itertools
+import requests
 import sys
 import time
-import requests
-import json
-import argparse
+
 
 from progress.bar import IncrementalBar
 
@@ -50,14 +52,46 @@ class User:
         user_groups = set([group['id'] for group in self.get_user_groups()])
         user_friends = self.get_friends()
 
-        all_friends_groups = set()
+        all_friends_groups = []
+        current_user = 0
+
         bar = IncrementalBar('Запрос групп, в которых состоят друзья', max=len(user_friends))
-        for fr in user_friends:
-            friend = User(fr)
-            friend_groups = friend.get_user_groups()
-            all_friends_groups.update([group['id'] for group in friend_groups])
-            bar.next()
+        while current_user < len(user_friends):
+            chunk_friends = user_friends[current_user: current_user + 25]
+            code = 'var friends_groups = [];' \
+                   'var friend_groups;' \
+                   f'var friends = {chunk_friends};' \
+                   'var i = 0;' \
+                   'while (i < friends.length) {' \
+                   '  friend_groups = API.groups.get({"user_id": friends[i], "extended": 0});' \
+                   '  friends_groups.push(friend_groups);' \
+                   '  i = i + 1;' \
+                   '}' \
+                   'return friends_groups;'
+            params = {
+                'user_id': 171691064,
+                'access_token': TOKEN_VK,
+                'v': API_VERSION_VK,
+                'code': code,
+            }
+            method = 'execute'
+
+            response = get_response(URL_VK, method, params)
+            all_friends_groups.extend([groups['items'] for groups in response['response'] if type(groups) == dict])
+            current_user += 25  # число максимальных запросов в методе execute
+            bar.next(25)
+
         bar.finish()
+        all_friends_groups = set(itertools.chain.from_iterable(all_friends_groups))
+
+        # all_friends_groups = set()
+        # bar = IncrementalBar('Запрос групп, в которых состоят друзья', max=len(user_friends))
+        # for fr in user_friends:
+        #     friend = User(fr)
+        #     friend_groups = friend.get_user_groups()
+        #     all_friends_groups.update([group['id'] for group in friend_groups])
+        #     bar.next(25)
+        # bar.finish()
 
         method = 'groups.getById'
         user_groups_without_friends = user_groups - all_friends_groups
