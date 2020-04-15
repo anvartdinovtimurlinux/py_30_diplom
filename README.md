@@ -6,9 +6,11 @@
 При запуске можно указать необязательные ключи:
 * -n, --name - никнейм пользователя или его ID;
 * -f, --file - путь к файлу, в который запишется результат работы программы;
+* -t, --token - путь к файлу, в который записан валидный ключ доступа пользователя VK;
+
 
 Пример запуска:
-`python3 get_groups_without_friends.py --name eshmargunov -f result.txt`
+`python3 get_groups_without_friends.py --name eshmargunov -f result.txt -t token.txt`
 
 Если не будет указан ключ --name, программа запустится в интерактивном режиме
 

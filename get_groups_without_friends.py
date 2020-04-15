@@ -1,3 +1,4 @@
+import sys
 import time
 import requests
 import json
@@ -5,7 +6,7 @@ import argparse
 
 from progress.bar import IncrementalBar
 
-TOKEN_VK = '709f6974b00c7b3299e7c5e1be0036e73bac6d72a04732e52b240705704df59b00cff81d7dd15c5510ef1'
+
 API_VERSION_VK = 5.103
 URL_VK = 'https://api.vk.com/method/'
 
@@ -75,9 +76,12 @@ def get_response(url, method, params):
     response = requests.get(f'{url}{method}', params=params).json()
     if response.get('error'):
         if response['error']['error_code'] == 6:
-            # Слишком много запросов в секунду 
+            # Слишком много запросов в секунду
             time.sleep(0.5)
             return get_response(url, method, params)
+        elif response['error']['error_code'] == 5:
+            print('Ошибка авторизации. Убедитесь, что передали верный токен')
+            sys.exit()
         elif response['error']['error_code'] == 18 or response['error']['error_code'] == 30:
             # Ошибки 18 и 30 возникают, если пользователь удален или его профиль приватный
             return
@@ -94,13 +98,15 @@ def arg_parse():
                                                  ' но не состоит никто из его друзей')
     parser.add_argument('-n', '--name', type=str, help='Никнейм пользователя или его ID')
     parser.add_argument('-f', '--file', type=str, help='Путь к файлу, в который запишется результат')
+    parser.add_argument('-t', '--token', type=str, help='Путь к файлу, в котором записан токен VK для запросов')
 
     user_name = parser.parse_args().name
     path_to_file = parser.parse_args().file
+    path_to_token_file = parser.parse_args().token
 
     if user_name:
-        return user_name, path_to_file
-    return None, None
+        return user_name, path_to_file, path_to_token_file
+    return None, None, None
 
 
 def write_json_to_file(data, path_to_file):
@@ -110,10 +116,17 @@ def write_json_to_file(data, path_to_file):
 
 
 def main():
-    user_id, path_to_file = arg_parse()
+    user_id, path_to_file, path_to_token_file = arg_parse()
     if not user_id:
         user_id = User.get_user_id((input('Введите идентификатор пользователя или его никнейм в VK: ')))
+    if not path_to_file:
         path_to_file = input('Введите путь к файлу для сохранения результата: ')
+    if not path_to_token_file:
+        path_to_token_file = input('Введите путь к файлу, в котором записан токен VK для запросов: ')
+
+    with open(path_to_token_file, encoding='utf-8') as f:
+        global TOKEN_VK
+        TOKEN_VK = f.read().strip()
 
     user = User(user_id)
     user_groups_without_friends = user.get_user_groups_without_friends()
