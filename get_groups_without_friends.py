@@ -75,6 +75,7 @@ def get_response(url, method, params):
     response = requests.get(f'{url}{method}', params=params).json()
     if response.get('error'):
         if response['error']['error_code'] == 6:
+            # Слишком много запросов в секунду 
             time.sleep(0.5)
             return get_response(url, method, params)
         elif response['error']['error_code'] == 18 or response['error']['error_code'] == 30:
