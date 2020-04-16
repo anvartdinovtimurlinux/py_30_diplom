@@ -5,7 +5,6 @@ import requests
 import sys
 import time
 
-
 from progress.bar import IncrementalBar
 
 
@@ -37,7 +36,7 @@ class User:
         response = get_response(URL_VK, method, params)
         return response['response'][0]['id']
 
-    def get_friends(self):
+    def get_user_friends(self):
         method = 'friends.get'
         response = get_response(URL_VK, method, self.params)
         return response['response']['items']
@@ -48,10 +47,8 @@ class User:
         response = get_response(URL_VK, method, self.params)
         return response['response']['items'] if response else []
 
-    def get_user_groups_without_friends(self):
-        user_groups = set([group['id'] for group in self.get_user_groups()])
-        user_friends = self.get_friends()
-
+    def get_user_friends_groups(self):
+        user_friends = self.get_user_friends()
         all_friends_groups = []
         current_user = 0
 
@@ -69,7 +66,7 @@ class User:
                    '}' \
                    'return friends_groups;'
             params = {
-                'user_id': 171691064,
+                # 'user_id': 171691064,
                 'access_token': TOKEN_VK,
                 'v': API_VERSION_VK,
                 'code': code,
@@ -80,21 +77,15 @@ class User:
             all_friends_groups.extend([groups['items'] for groups in response['response'] if type(groups) == dict])
             current_user += 25  # число максимальных запросов в методе execute
             bar.next(25)
-
         bar.finish()
-        all_friends_groups = set(itertools.chain.from_iterable(all_friends_groups))
+        return set(itertools.chain.from_iterable(all_friends_groups))
 
-        # all_friends_groups = set()
-        # bar = IncrementalBar('Запрос групп, в которых состоят друзья', max=len(user_friends))
-        # for fr in user_friends:
-        #     friend = User(fr)
-        #     friend_groups = friend.get_user_groups()
-        #     all_friends_groups.update([group['id'] for group in friend_groups])
-        #     bar.next(25)
-        # bar.finish()
+    def get_user_groups_without_friends(self):
+        user_groups = set([group['id'] for group in self.get_user_groups()])
+        all_friends_groups = self.get_user_friends_groups()
+        user_groups_without_friends = user_groups - all_friends_groups
 
         method = 'groups.getById'
-        user_groups_without_friends = user_groups - all_friends_groups
         self.params['group_ids'] = ','.join(map(str, user_groups_without_friends))
         self.params['fields'] = 'members_count'
         response = get_response(URL_VK, method, self.params)
@@ -121,8 +112,6 @@ def get_response(url, method, params):
             return
         else:
             print(response['error'])
-    if response.get('error'):
-        pass
     else:
         return response
 
