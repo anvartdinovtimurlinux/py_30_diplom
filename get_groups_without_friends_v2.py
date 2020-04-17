@@ -56,9 +56,6 @@ class ApiVK:
             elif response['error']['error_code'] == 5:
                 print('Ошибка авторизации. Убедитесь, что передали верный токен')
                 sys.exit()
-            elif response['error']['error_code'] == 18 or response['error']['error_code'] == 30:
-                # Ошибки 18 и 30 возникают, если пользователь удален или его профиль приватный
-                return
             else:
                 print(response['error'])
                 sys.exit()
