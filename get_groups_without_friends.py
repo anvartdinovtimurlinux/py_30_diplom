@@ -14,10 +14,7 @@ URL_VK = 'https://api.vk.com/method/'
 
 class User:
     def __init__(self, user_ids):
-        if type(user_ids) == int:
-            self.user_id = user_ids
-        else:
-            self.user_id = User.get_user_id(user_ids)
+        self.user_id = User.get_user_id(user_ids)
 
         self.params = {
             'user_id': self.user_id,
@@ -43,7 +40,7 @@ class User:
 
     def get_user_groups(self):
         method = 'groups.get'
-        self.params['extended'] = 1
+        # self.params['extended'] = 1
         response = get_response(URL_VK, method, self.params)
         return response['response']['items'] if response else []
 
@@ -81,7 +78,7 @@ class User:
         return set(itertools.chain.from_iterable(all_friends_groups))
 
     def get_user_groups_without_friends(self):
-        user_groups = set([group['id'] for group in self.get_user_groups()])
+        user_groups = set(self.get_user_groups())
         all_friends_groups = self.get_user_friends_groups()
         user_groups_without_friends = user_groups - all_friends_groups
 
@@ -112,6 +109,7 @@ def get_response(url, method, params):
             return
         else:
             print(response['error'])
+            sys.exit()
     else:
         return response
 
